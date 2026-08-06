@@ -1,0 +1,20 @@
+services:
+  paisagens:
+    build: .
+    container_name: paisagens
+    restart: always
+
+    environment:
+      NODE_ENV: production
+
+      DATABASE_URL: postgresql://postgres:ibs12345@postgres:5432/evolution_db
+
+    ports:
+      - "3000:3000"
+
+    networks:
+      - evolution_net
+
+networks:
+  evolution_net:
+    external: true
