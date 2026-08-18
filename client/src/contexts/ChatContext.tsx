@@ -6,6 +6,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  hasError?: boolean;
 }
 
 export interface Chat {
@@ -24,6 +25,7 @@ interface ChatContextType {
   deleteChat: (chatId: string) => void;
   selectChat: (chatId: string) => void;
   addMessage: (message: Message) => void;
+  removeMessage: (chatId: string, messageId: string) => void;
   updateChatTitle: (chatId: string, title: string) => void;
 }
 
@@ -35,7 +37,15 @@ const CURRENT_CHAT_KEY = "chatbot_current_chat";
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-
+  const removeMessage = (chatId: string, messageId: string) => {
+  setChats((prev) =>
+    prev.map((chat) =>
+      chat.id === chatId
+        ? { ...chat, messages: chat.messages.filter((m) => m.id !== messageId) }
+        : chat
+    )
+  );
+};
   // Carregar chats do localStorage
   useEffect(() => {
     const storedChats = localStorage.getItem(STORAGE_KEY);
@@ -138,6 +148,7 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
         deleteChat,
         selectChat,
         addMessage,
+        removeMessage,
         updateChatTitle,
       }}
     >
