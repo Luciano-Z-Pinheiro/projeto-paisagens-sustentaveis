@@ -1,5 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { nanoid } from "nanoid";
+import { io, Socket } from "socket.io-client";
+import { toast } from "sonner";
 
 export interface Message {
   id: string;
@@ -15,143 +17,125 @@ export interface Chat {
   messages: Message[];
   createdAt: number;
   updatedAt: number;
+  institution?: string;
 }
 
 interface ChatContextType {
   chats: Chat[];
   currentChatId: string | null;
   currentChat: Chat | null;
+  activeUsers: number;
   createNewChat: () => void;
   deleteChat: (chatId: string) => void;
   selectChat: (chatId: string) => void;
   addMessage: (message: Message) => void;
   removeMessage: (chatId: string, messageId: string) => void;
   updateChatTitle: (chatId: string, title: string) => void;
+  searchChats: (query: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
-
-const STORAGE_KEY = "chatbot_chats";
-const CURRENT_CHAT_KEY = "chatbot_current_chat";
+// URL do nosso backend (em produção pode ser a mesma origem)
+const API_URL = "http://localhost:3001";
 
 export function ChatProvider({ children }: { children: React.ReactNode }) {
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-  const removeMessage = (chatId: string, messageId: string) => {
-  setChats((prev) =>
-    prev.map((chat) =>
-      chat.id === chatId
-        ? { ...chat, messages: chat.messages.filter((m) => m.id !== messageId) }
-        : chat
-    )
-  );
-};
-  // Carregar chats do localStorage
-  useEffect(() => {
-    const storedChats = localStorage.getItem(STORAGE_KEY);
-    const storedCurrentChatId = localStorage.getItem(CURRENT_CHAT_KEY);
+  const [activeUsers, setActiveUsers] = useState(1);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-    if (storedChats) {
-      try {
-        const parsedChats = JSON.parse(storedChats);
-        setChats(parsedChats);
-        if (storedCurrentChatId && parsedChats.some((c: Chat) => c.id === storedCurrentChatId)) {
-          setCurrentChatId(storedCurrentChatId);
-        } else if (parsedChats.length > 0) {
-          setCurrentChatId(parsedChats[0].id);
-        }
-      } catch (error) {
-        console.error("Erro ao carregar chats:", error);
-      }
-    }
+  // 1. Configurar WebSocket
+  useEffect(() => {
+    const newSocket = io(API_URL);
+    setSocket(newSocket);
+
+    newSocket.on("user_joined", (data) => {
+      toast.info(data.message); // Notifica na tela que alguém entrou
+      setActiveUsers((prev) => prev + 1);
+    });
+
+    return () => { newSocket.close(); };
   }, []);
 
-  // Salvar chats no localStorage
+  // 2. Avisar o servidor ao trocar de chat
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(chats));
-  }, [chats]);
+    if (socket && currentChatId) {
+      socket.emit("join_chat", currentChatId);
+      setActiveUsers(1); // Reseta a contagem local ao mudar de sala
+    }
+  }, [currentChatId, socket]);
 
-  // Salvar chat atual no localStorage
-  useEffect(() => {
-    if (currentChatId) {
-      localStorage.setItem(CURRENT_CHAT_KEY, currentChatId);
+  // 3. Buscar Chats do Banco
+  const fetchChats = useCallback(async (searchQuery = "") => {
+    try {
+      const url = searchQuery ? `${API_URL}/api/chats?search=${encodeURIComponent(searchQuery)}` : `${API_URL}/api/chats`;
+      const res = await fetch(url);
+      const data = await res.json();
+      setChats(data);
+      if (!currentChatId && data.length > 0) setCurrentChatId(data[0].id);
+    } catch (error) {
+      console.error("Erro ao buscar do banco", error);
     }
   }, [currentChatId]);
 
-  const createNewChat = () => {
-    const newChat: Chat = {
-      id: nanoid(),
-      title: "Novo Chat",
-      messages: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
+  useEffect(() => { fetchChats(); }, [fetchChats]);
+
+  const searchChats = (query: string) => { fetchChats(query); };
+
+  const createNewChat = async () => {
+    const newChat: Chat = { id: nanoid(), title: "Novo Chat", messages: [], createdAt: Date.now(), updatedAt: Date.now() };
     setChats((prev) => [newChat, ...prev]);
     setCurrentChatId(newChat.id);
+    await fetch(`${API_URL}/api/chats`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(newChat)
+    });
   };
 
-  const deleteChat = (chatId: string) => {
+  const deleteChat = async (chatId: string) => {
     setChats((prev) => prev.filter((c) => c.id !== chatId));
-    if (currentChatId === chatId) {
-      const remaining = chats.filter((c) => c.id !== chatId);
-      if (remaining.length > 0) {
-        setCurrentChatId(remaining[0].id);
-      } else {
-        setCurrentChatId(null);
+    if (currentChatId === chatId) setCurrentChatId(null);
+    await fetch(`${API_URL}/api/chats/${chatId}`, { method: "DELETE" });
+  };
+
+  const selectChat = (chatId: string) => setCurrentChatId(chatId);
+
+  const addMessage = async (message: Message) => {
+    if (!currentChatId) return;
+    
+    // Atualiza interface local
+    setChats((prev) => prev.map((chat) => {
+      if (chat.id === currentChatId) {
+        const title = chat.messages.length === 0 && message.role === "user" ? message.content.substring(0, 50) : chat.title;
+        return { ...chat, messages: [...chat.messages, message], updatedAt: Date.now(), title };
       }
-    }
+      return chat;
+    }));
+
+    // Salva no banco de dados
+    await fetch(`${API_URL}/api/messages`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...message, chat_id: currentChatId })
+    });
   };
 
-  const selectChat = (chatId: string) => {
-    setCurrentChatId(chatId);
+  const removeMessage = (chatId: string, messageId: string) => {
+    setChats((prev) => prev.map((chat) => chat.id === chatId ? { ...chat, messages: chat.messages.filter((m) => m.id !== messageId) } : chat));
   };
 
-  const addMessage = (message: Message) => {
-    setChats((prev) =>
-      prev.map((chat) => {
-        if (chat.id === currentChatId) {
-          // Atualizar título se for a primeira mensagem do usuário
-          const title =
-            chat.messages.length === 0 && message.role === "user"
-              ? message.content.substring(0, 50)
-              : chat.title;
-
-          return {
-            ...chat,
-            messages: [...chat.messages, message],
-            updatedAt: Date.now(),
-            title,
-          };
-        }
-        return chat;
-      })
-    );
-  };
-
-  const updateChatTitle = (chatId: string, title: string) => {
-    setChats((prev) =>
-      prev.map((chat) =>
-        chat.id === chatId ? { ...chat, title } : chat
-      )
-    );
+  const updateChatTitle = async (chatId: string, title: string) => {
+    const chat = chats.find(c => c.id === chatId);
+    if (!chat) return;
+    setChats((prev) => prev.map((c) => c.id === chatId ? { ...c, title } : c));
+    await fetch(`${API_URL}/api/chats`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...chat, title, updated_at: Date.now() })
+    });
   };
 
   const currentChat = chats.find((c) => c.id === currentChatId) || null;
 
   return (
-    <ChatContext.Provider
-      value={{
-        chats,
-        currentChatId,
-        currentChat,
-        createNewChat,
-        deleteChat,
-        selectChat,
-        addMessage,
-        removeMessage,
-        updateChatTitle,
-      }}
-    >
+    <ChatContext.Provider value={{ chats, currentChatId, currentChat, activeUsers, createNewChat, deleteChat, selectChat, addMessage, removeMessage, updateChatTitle, searchChats }}>
       {children}
     </ChatContext.Provider>
   );
@@ -159,8 +143,6 @@ export function ChatProvider({ children }: { children: React.ReactNode }) {
 
 export function useChat() {
   const context = useContext(ChatContext);
-  if (context === undefined) {
-    throw new Error("useChat deve ser usado dentro de ChatProvider");
-  }
+  if (context === undefined) throw new Error("useChat deve ser usado dentro de ChatProvider");
   return context;
 }

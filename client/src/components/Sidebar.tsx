@@ -10,9 +10,12 @@ import {
   Moon, 
   Sun, 
   Edit2, 
-  Check 
+  Check
 } from "lucide-react";
 import { useState } from "react";
+import { Search } from "lucide-react";
+
+const { chats, currentChatId, createNewChat, deleteChat, selectChat, updateChatTitle, searchChats } = useChat();
 
 interface SidebarProps {
   isOpen: boolean;
@@ -85,6 +88,18 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <MessageSquarePlus size={16} className="mr-2" />
             Novo Chat
           </Button>
+        </div>
+
+        <div className="p-4 border-b border-sidebar-border">
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-sidebar-foreground/50" />
+            <input
+              type="text"
+              placeholder="Pesquisar em tudo..."
+              onChange={(e) => searchChats(e.target.value)}
+              className="w-full bg-sidebar-accent/50 text-sm text-sidebar-foreground rounded-md pl-9 pr-3 py-2 border-none outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
         </div>
 
         {/* Chat List */}

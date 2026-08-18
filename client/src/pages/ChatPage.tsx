@@ -11,7 +11,7 @@ import { toast } from "sonner";
 
 // Componente interno que usa o contexto
 function ChatPageContent() {
-  const { currentChat, addMessage, createNewChat, removeMessage } = useChat();
+  const { currentChat, activeUsers, addMessage, createNewChat, removeMessage } = useChat();
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -167,6 +167,24 @@ function ChatPageContent() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="border-b border-border bg-card px-4 py-4 flex items-center justify-between">
+          <div className="flex-1">
+            <h1 className="text-xl font-semibold text-foreground">
+              ChatBot Projeto Paisagens Sustentáveis
+            </h1>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-xs text-muted-foreground">
+                Chat ID: {currentChat.id.substring(0, 8)}...
+              </p>
+              {activeUsers > 1 && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full flex items-center gap-1 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                  {activeUsers} online
+                </span>
+              )}
+            </div>
+          </div>
+          </header>
+        <header className="border-b border-border bg-card px-4 py-4 flex items-center justify-between">  
           <div className="flex-1">
             <h1 className="text-xl font-semibold text-foreground">
               ChatBot Projeto Paisagens Sustentáveis
