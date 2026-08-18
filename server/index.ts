@@ -36,7 +36,8 @@ async function startServer() {
     const { search } = req.query;
     try {
       let query = `
-        SELECT c.*, 
+        SELECT c.id, c.title, c.institution, c.created_at as "createdAt", c.updated_at as "updatedAt",
+          c.is_pinned as "isPinned", c.is_archived as "isArchived",
           COALESCE(
             json_agg(
               json_build_object('id', m.id, 'role', m.role, 'content', m.content, 'timestamp', m.timestamp, 'hasError', m.has_error)
@@ -62,7 +63,7 @@ async function startServer() {
       res.status(500).json({ error: "Erro interno" });
     }
   });
-
+  
   // 2. Criar ou Atualizar um Chat
   app.post("/api/chats", async (req, res) => {
     const { id, title, institution, created_at, updated_at } = req.body;
@@ -81,19 +82,23 @@ async function startServer() {
   });
 
   // 3. Salvar Mensagem
-  app.post("/api/messages", async (req, res) => {
-    const { id, chat_id, role, content, hasError, timestamp } = req.body;
+  app.post("/api/chats", async (req, res) => {
+    const { id, title, institution, createdAt, updatedAt, isPinned, isArchived } = req.body;
     try {
       await pool.query(
-        `INSERT INTO "Chatbot_PPS".messages (id, chat_id, role, content, has_error, timestamp) 
-         VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (id) DO NOTHING`,
-        [id, chat_id, role, content, hasError || false, timestamp]
+        `INSERT INTO "Chatbot_PPS".chats (id, title, institution, created_at, updated_at, is_pinned, is_archived) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (id) DO UPDATE SET 
+            title = EXCLUDED.title, 
+            updated_at = EXCLUDED.updated_at, 
+            is_pinned = EXCLUDED.is_pinned, 
+            is_archived = EXCLUDED.is_archived`,
+        [id, title, institution || null, createdAt, updatedAt, isPinned || false, isArchived || false]
       );
       res.json({ success: true });
     } catch (err) {
-      console.error("Erro ao salvar mensagem:", err);
-      res.status(500).json({ error: "Erro ao salvar mensagem" });
+      console.error(err);
+      res.status(500).json({ error: "Erro ao salvar chat" });
     }
   });
 
