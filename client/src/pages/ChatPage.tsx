@@ -200,7 +200,7 @@ function ChatPageContent() {
           <div className="max-w-4xl mx-auto">
             {currentChat.messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                <div className="text-4xl mb-4">🌱</div>
+                <div className="text-4xl mb-4"><img src="/logo.png" alt="Logo Paisagens Sustentáveis" className="w-16 h-16 object-contain" /></div>
                 <h2 className="text-lg font-semibold text-foreground mb-2">
                   Comece uma conversa
                 </h2>
