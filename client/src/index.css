@@ -43,74 +43,83 @@
 }
 
 :root {
-  --primary: #10B981;
-  --primary-foreground: #F0FDF4;
-  --sidebar-primary: #10B981;
-  --sidebar-primary-foreground: #F0FDF4;
-  --chart-1: #10B981;
-  --chart-2: #059669;
-  --chart-3: #047857;
-  --chart-4: #065F46;
-  --chart-5: #064E3B;
-  --radius: 0.5rem;
+  /* Cores da Marca - Modo Claro */
+  --primary: #532700; /* Marrom Principal */
+  --primary-foreground: #FFFFFF;
+  --sidebar-primary: #532700;
+  --sidebar-primary-foreground: #FFFFFF;
+  
   --background: #FFFFFF;
-  --foreground: #1A1A1A;
+  --foreground: #41261D; /* Marrom Secundário Mais Escuro para textos */
+  
   --card: #FFFFFF;
-  --card-foreground: #1A1A1A;
+  --card-foreground: #41261D;
   --popover: #FFFFFF;
-  --popover-foreground: #1A1A1A;
-  --secondary: #F5F5F5;
-  --secondary-foreground: #4B5563;
-  --muted: #E5E7EB;
-  --muted-foreground: #6B7280;
-  --accent: #10B981;
-  --accent-foreground: #FFFFFF;
+  --popover-foreground: #41261D;
+  
+  --secondary: #F2CDA0; /* Bege Claro Principal */
+  --secondary-foreground: #532700;
+  
+  --muted: #FAF8F5; /* Fundo bem sutil para contraste */
+  --muted-foreground: #736049; /* Marrom Mudo Secundário */
+  
+  --accent: #A6BE80; /* Verde Sálvia de Apoio para detalhes interativos */
+  --accent-foreground: #294012; /* Verde Escuro de Apoio */
+  
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
+  
   --border: #E5E7EB;
-  --input: #F3F4F6;
-  --ring: #10B981;
-  --sidebar: #F9FAFB;
-  --sidebar-foreground: #1A1A1A;
-  --sidebar-accent: #E5E7EB;
-  --sidebar-accent-foreground: #1A1A1A;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #10B981;
+  --input: #FAF8F5;
+  --ring: #A6BE80; /* Foco nos inputs em Verde Sálvia */
+  
+  --sidebar: #FDFBF7; /* Bege super suave para a barra lateral */
+  --sidebar-foreground: #41261D;
+  --sidebar-accent: #F2CDA0;
+  --sidebar-accent-foreground: #532700;
+  --sidebar-border: #EAE6DF;
+  --sidebar-ring: #A6BE80;
+
+  --radius: 0.75rem;
 }
 
 .dark {
-  --primary: #10B981;
-  --primary-foreground: #F0FDF4;
-  --sidebar-primary: #10B981;
-  --sidebar-primary-foreground: #F0FDF4;
-  --background: #0F0F0F;
-  --foreground: #F3F4F6;
-  --card: #1A1A1A;
-  --card-foreground: #F3F4F6;
-  --popover: #1A1A1A;
-  --popover-foreground: #F3F4F6;
-  --secondary: #1F2937;
-  --secondary-foreground: #D1D5DB;
-  --muted: #374151;
-  --muted-foreground: #9CA3AF;
-  --accent: #10B981;
-  --accent-foreground: #0F0F0F;
+    /* Cores da Marca - Modo Escuro */
+  --primary: #A6BE80; /* O Verde Sálvia brilha no modo escuro */
+  --primary-foreground: #294012; /* Verde Escuro para contraste interno */
+  --sidebar-primary: #A6BE80;
+  --sidebar-primary-foreground: #294012;
+  
+  --background: #1C1917; /* Fundo chumbo/terroso bem escuro */
+  --foreground: #F2CDA0; /* Textos no Bege Claro Principal */
+  
+  --card: #292524;
+  --card-foreground: #F2CDA0;
+  --popover: #292524;
+  --popover-foreground: #F2CDA0;
+  
+  --secondary: #41261D; /* Marrom Secundário Escuro para botões inativos */
+  --secondary-foreground: #F2CDA0;
+  
+  --muted: #292524;
+  --muted-foreground: #D49B6A; /* Caramelo Secundário */
+  
+  --accent: #41261D;
+  --accent-foreground: #F2CDA0;
+  
   --destructive: #F87171;
-  --destructive-foreground: #0F0F0F;
-  --border: #374151;
-  --input: #1F2937;
-  --ring: #10B981;
-  --chart-1: #10B981;
-  --chart-2: #059669;
-  --chart-3: #047857;
-  --chart-4: #065F46;
-  --chart-5: #064E3B;
-  --sidebar: #1A1A1A;
-  --sidebar-foreground: #F3F4F6;
-  --sidebar-accent: #374151;
-  --sidebar-accent-foreground: #F3F4F6;
-  --sidebar-border: #374151;
-  --sidebar-ring: #10B981;
+  --destructive-foreground: #1C1917;
+  
+  --border: #44403C;
+  --input: #292524;
+  --ring: #A6BE80;
+  
+  --sidebar: #1C1917;
+  --sidebar-foreground: #F2CDA0;
+  --sidebar-accent: #41261D;
+  --sidebar-accent-foreground: #F2CDA0;
+  --sidebar-border: #44403C;
+  --sidebar-ring: #A6BE80;
 }
 
 @layer base {
