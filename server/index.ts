@@ -4,20 +4,67 @@ import path from "path";
 import { fileURLToPath } from "url";
 import pg from "pg";
 import { Server } from "socket.io";
+import cors from "cors";
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { Request, Response, NextFunction } from "express";
 
+const JWT_SECRET = process.env.JWT_SECRET || "minha_chave_super_secreta_paisagens";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const authenticateToken = (req: Request, res: Response, next: NextFunction): void => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Pega só o token depois da palavra "Bearer"
+
+  if (!token) {
+    res.status(401).json({ error: "Acesso negado. Token não fornecido." });
+    return;
+  }
+
+  // Verifica se o token é verdadeiro usando a sua chave secreta
+  jwt.verify(token, JWT_SECRET, (err, decodedUser) => {
+    if (err) {
+      res.status(403).json({ error: "Token inválido ou expirado." });
+      return;
+    }
+    
+    // Salva os dados do usuário dentro da requisição e manda seguir em frente
+    (req as any).user = decodedUser;
+    next();
+  });
+};
 
 // ==========================================
 // CONFIGURAÇÃO DO BANCO DE DADOS
 // ==========================================
 const { Pool } = pg;
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || "postgresql://postgres:ibs12345@localhost:5432/evolution_db",
+  user: "postgres",
+  password: "ibs12345",
+  host: "127.0.0.1",
+  port: 5432,
+  database: "evolution_db"
+});
+
+// Força o Postgres a procurar direto dentro do seu Schema
+pool.on("connect", (client) => {
+  client.query('SET search_path TO "Chatbot_PPS", public;');
+});
+
+// Teste de conexão ao iniciar
+pool.connect((err, client, release) => {
+  if (err) {
+    console.error("❌ Erro fatal ao conectar no banco de dados:", err.message);
+  } else {
+    console.log("✅ Banco de dados conectado com SUCESSO!");
+    release();
+  }
 });
 
 async function startServer() {
   const app = express();
+  app.use(cors());
   const server = createServer(app);
   
   // Configurando o Socket.io
@@ -28,104 +75,163 @@ async function startServer() {
   app.use(express.json());
 
   // ==========================================
-  // ROTAS DA API (SALVAR E LER DO BANCO)
+  // ROTAS DE AUTENTICAÇÃO
   // ==========================================
 
-  // 1. Buscar todos os chats e suas mensagens
-  app.get("/api/chats", async (req, res) => {
-    const { search } = req.query;
+  // 1. Rota de Cadastro (Registro)
+  app.post("/api/auth/register", async (req, res) => {
     try {
-      let query = `
-        SELECT c.id, c.title, c.institution, c.created_at as "createdAt", c.updated_at as "updatedAt",
-          c.is_pinned as "isPinned", c.is_archived as "isArchived",
-          COALESCE(
-            json_agg(
-              json_build_object('id', m.id, 'role', m.role, 'content', m.content, 'timestamp', m.timestamp, 'hasError', m.has_error)
-              ORDER BY m.timestamp ASC
-            ) FILTER (WHERE m.id IS NOT NULL), '[]'
-          ) as messages
-        FROM "Chatbot_PPS".chats c
-        LEFT JOIN "Chatbot_PPS".messages m ON c.id = m.chat_id
-      `;
-      let values: any[] = [];
+      const { email, username, password } = req.body;
 
-      if (search) {
-        query += ` WHERE c.title ILIKE $1 OR m.content ILIKE $1 `;
-        values = [`%${search}%`];
+      const userExists = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+      if (userExists.rows.length > 0) {
+        return res.status(400).json({ error: "Este e-mail já está cadastrado." });
       }
 
-      query += ` GROUP BY c.id ORDER BY c.updated_at DESC`;
+      const saltRounds = 10;
+      const passwordHash = await bcrypt.hash(password, saltRounds);
 
-      const result = await pool.query(query, values);
+      const newUser = await pool.query(
+        "INSERT INTO users (email, username, password_hash) VALUES ($1, $2, $3) RETURNING id, email, username",
+        [email, username, passwordHash]
+      );
+
+      res.status(201).json(newUser.rows[0]);
+    } catch (error) {
+      console.error("Erro no registro:", error);
+      res.status(500).json({ error: "Erro interno no servidor ao registrar usuário." });
+    }
+  });
+
+  // 2. Rota de Login
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+
+      const userResult = await pool.query("SELECT * FROM users WHERE email = $1", [email]);
+      if (userResult.rows.length === 0) {
+        return res.status(401).json({ error: "E-mail ou senha incorretos." });
+      }
+
+      const user = userResult.rows[0];
+
+      const validPassword = await bcrypt.compare(password, user.password_hash);
+      if (!validPassword) {
+        return res.status(401).json({ error: "E-mail ou senha incorretos." });
+      }
+
+      const token = jwt.sign(
+        { id: user.id, email: user.email, username: user.username },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
+      res.json({ 
+        token, 
+        user: { id: user.id, email: user.email, username: user.username } 
+      });
+    } catch (error) {
+      console.error("Erro no login:", error);
+      res.status(500).json({ error: "Erro interno no servidor ao fazer login." });
+    }
+  });
+
+  // ==========================================
+  // ROTAS DE RELATÓRIOS (PLANILHAS)
+  // ==========================================
+
+  // 1. Buscar todos os relatórios gerados
+  app.get("/api/reports", async (req, res) => {
+    try {
+      const result = await pool.query(`
+        SELECT reports.*, users.username 
+        FROM reports 
+        LEFT JOIN users ON reports.user_id = users.id 
+        ORDER BY reports.created_at DESC
+        `);
       res.json(result.rows);
-    } catch (err) {
-      console.error("Erro ao buscar chats:", err);
-      res.status(500).json({ error: "Erro interno" });
-    }
-  });
-  
-  // 2. Criar ou Atualizar um Chat
-  app.post("/api/chats", async (req, res) => {
-    const { id, title, institution, created_at, updated_at } = req.body;
-    try {
-      await pool.query(
-        `INSERT INTO "Chatbot_PPS".chats (id, title, institution, created_at, updated_at) 
-         VALUES ($1, $2, $3, $4, $5)
-         ON CONFLICT (id) DO UPDATE SET title = EXCLUDED.title, updated_at = EXCLUDED.updated_at`,
-        [id, title, institution || null, created_at, updated_at]
-      );
-      res.json({ success: true });
-    } catch (err) {
-      console.error("Erro ao salvar chat:", err);
-      res.status(500).json({ error: "Erro ao salvar chat" });
+    } catch (error) {
+      console.error("Erro ao buscar relatórios:", error);
+      res.status(500).json({ error: "Erro ao buscar relatórios" });
     }
   });
 
-  // 3. Salvar Mensagem
-  app.post("/api/chats", async (req, res) => {
-    const { id, title, institution, createdAt, updatedAt, isPinned, isArchived } = req.body;
+  // Rota de criar o relatório
+app.post("/api/reports", authenticateToken, async (req, res) => {
+  try {
+    const { title, file_url } = req.body;
+    
+    // O id do usuário vem do token descriptografado pelo middleware (req.user)
+    const userId = (req as any).user.id; 
+
+    // Atualizamos o INSERT para incluir o user_id
+    const result = await pool.query(
+      `INSERT INTO reports (title, file_url, user_id) 
+       VALUES ($1, $2, $3) RETURNING *`,
+      [title, file_url, userId]
+    );
+
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error("Erro ao salvar relatório:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
+
+  // 3. Arquivar ou Desarquivar relatório
+  app.patch("/api/reports/:id/archive", async (req, res) => {
     try {
-      await pool.query(
-        `INSERT INTO "Chatbot_PPS".chats (id, title, institution, created_at, updated_at, is_pinned, is_archived) 
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
-         ON CONFLICT (id) DO UPDATE SET 
-            title = EXCLUDED.title, 
-            updated_at = EXCLUDED.updated_at, 
-            is_pinned = EXCLUDED.is_pinned, 
-            is_archived = EXCLUDED.is_archived`,
-        [id, title, institution || null, createdAt, updatedAt, isPinned || false, isArchived || false]
-      );
+      const { id } = req.params;
+      const { is_archived } = req.body;
+      await pool.query('UPDATE reports SET is_archived = $1 WHERE id = $2', [is_archived, id]);
+      
+      io.emit("report_updated"); // Atualiza a tela de todos
       res.json({ success: true });
-    } catch (err) {
-      console.error(err);
-      res.status(500).json({ error: "Erro ao salvar chat" });
+    } catch (error) {
+      console.error("Erro ao arquivar:", error);
+      res.status(500).json({ error: "Erro ao arquivar relatório" });
     }
   });
 
-  // 4. Deletar Chat
-  app.delete("/api/chats/:id", async (req, res) => {
+  // 4. Excluir relatório definitivamente
+  app.delete("/api/reports/:id", async (req, res) => {
     try {
-      await pool.query(`DELETE FROM "Chatbot_PPS".chats WHERE id = $1`, [req.params.id]);
+      const { id } = req.params;
+      await pool.query('DELETE FROM reports WHERE id = $1', [id]);
+      
+      io.emit("report_updated"); // Atualiza a tela de todos
       res.json({ success: true });
-    } catch (err) {
-      console.error("Erro ao deletar chat:", err);
-      res.status(500).json({ error: "Erro ao deletar chat" });
+    } catch (error) {
+      console.error("Erro ao deletar:", error);
+      res.status(500).json({ error: "Erro ao excluir relatório" });
     }
   });
+
 
   // ==========================================
-  // WEBSOCKETS (INDICADOR DE PRESENÇA)
+  // WEBSOCKETS (INDICADOR DE PRESENÇA GLOBAL)
   // ==========================================
+  // Como não há mais salas separadas, vamos mostrar quem está na ferramenta
+  const onlineUsers = new Map();
+
   io.on("connection", (socket) => {
-    console.log(`Usuário conectado: ${socket.id}`);
+    let currentUser: string | null = null;
 
-    socket.on("join_chat", (chatId) => {
-      socket.join(chatId);
-      socket.to(chatId).emit("user_joined", { socketId: socket.id, message: "Outra pessoa está visualizando este chat" });
+    // Quando alguém entra na ferramenta
+    socket.on("join_dashboard", ({ username }) => {
+      currentUser = username;
+      onlineUsers.set(socket.id, username);
+      
+      // Envia a lista atualizada com os NOMES ÚNICOS de todos online
+      io.emit("active_users", Array.from(new Set(onlineUsers.values())));
     });
 
+    // Quando a pessoa fecha a aba ou o navegador
     socket.on("disconnect", () => {
-      console.log(`Usuário desconectado: ${socket.id}`);
+      if (currentUser) {
+        onlineUsers.delete(socket.id);
+        io.emit("active_users", Array.from(new Set(onlineUsers.values())));
+      }
     });
   });
 

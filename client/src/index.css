@@ -27,11 +27,6 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -43,66 +38,66 @@
 }
 
 :root {
-  /* Cores da Marca - Modo Claro */
-  --primary: #532700; /* Marrom Principal */
-  --primary-foreground: #FFFFFF;
-  --sidebar-primary: #532700;
-  --sidebar-primary-foreground: #FFFFFF;
+  /* TEMA CLARO - 100% Tons Terrosos (Sem Branco Hospital) */
+  --primary: #532700; /* Marrom Escuro (Botões principais) */
+  --primary-foreground: #FFFFFF; 
   
-  --background: #FFFFFF;
-  --foreground: #41261D; /* Marrom Secundário Mais Escuro para textos */
+  --background: #F4EBE1; /* Fundo da tela: Bege quente e elegante */
+  --foreground: #41261D; /* Textos: Marrom Escuro */
   
-  --card: #FFFFFF;
+  --card: #FCF8F2; /* Caixa do formulário: Um creme bem clarinho para "saltar" do fundo bege */
   --card-foreground: #41261D;
-  --popover: #FFFFFF;
+  --popover: #FCF8F2;
   --popover-foreground: #41261D;
   
-  --secondary: #F2CDA0; /* Bege Claro Principal */
+  --secondary: #F2CDA0; 
   --secondary-foreground: #532700;
   
-  --muted: #FAF8F5; /* Fundo bem sutil para contraste */
-  --muted-foreground: #736049; /* Marrom Mudo Secundário */
+  --muted: #EBE1D5; /* Fundo dos inputs de data um pouco mais escuro que o card */
+  --muted-foreground: #736049; 
   
-  --accent: #A6BE80; /* Verde Sálvia de Apoio para detalhes interativos */
-  --accent-foreground: #294012; /* Verde Escuro de Apoio */
+  --accent: #A6BE80; /* Verde Sálvia */
+  --accent-foreground: #294012; 
   
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   
-  --border: #E5E7EB;
-  --input: #FAF8F5;
-  --ring: #A6BE80; /* Foco nos inputs em Verde Sálvia */
+  --border: #E0D4C8; /* Linhas de contorno em um tom de areia escuro */
+  --input: #FCF8F2;
+  --ring: #A6BE80; 
   
-  --sidebar: #FDFBF7; /* Bege super suave para a barra lateral */
+  --sidebar: #E3D3C2; /* Menu Lateral: Bege/Marrom mais denso e encorpado */
   --sidebar-foreground: #41261D;
-  --sidebar-accent: #F2CDA0;
+  --sidebar-accent: #D4BEA8; /* Cor dos botões do menu ao passar o mouse */
   --sidebar-accent-foreground: #532700;
-  --sidebar-border: #EAE6DF;
+  --sidebar-border: #D4BEA8;
   --sidebar-ring: #A6BE80;
+  --sidebar-primary: #532700;
+  --sidebar-primary-foreground: #FFFFFF;
 
   --radius: 0.75rem;
 }
 
 .dark {
-    /* Cores da Marca - Modo Escuro */
-  --primary: #A6BE80; /* O Verde Sálvia brilha no modo escuro */
-  --primary-foreground: #294012; /* Verde Escuro para contraste interno */
+  /* TEMA ESCURO - Restaurado com seus HEX perfeitos originais */
+  --primary: #A6BE80; 
+  --primary-foreground: #294012; 
   --sidebar-primary: #A6BE80;
   --sidebar-primary-foreground: #294012;
   
-  --background: #1C1917; /* Fundo chumbo/terroso bem escuro */
-  --foreground: #F2CDA0; /* Textos no Bege Claro Principal */
+  --background: #1C1917; 
+  --foreground: #F2CDA0; 
   
   --card: #292524;
   --card-foreground: #F2CDA0;
   --popover: #292524;
   --popover-foreground: #F2CDA0;
   
-  --secondary: #41261D; /* Marrom Secundário Escuro para botões inativos */
+  --secondary: #41261D; 
   --secondary-foreground: #F2CDA0;
   
   --muted: #292524;
-  --muted-foreground: #D49B6A; /* Caramelo Secundário */
+  --muted-foreground: #D49B6A; 
   
   --accent: #41261D;
   --accent-foreground: #F2CDA0;
@@ -143,25 +138,11 @@
 }
 
 @layer components {
-  /**
-   * Custom container utility that centers content and adds responsive padding.
-   *
-   * This overrides Tailwind's default container behavior to:
-   * - Auto-center content (mx-auto)
-   * - Add responsive horizontal padding
-   * - Set max-width for large screens
-   *
-   * Usage: <div className="container">...</div>
-   *
-   * For custom widths, use max-w-* utilities directly:
-   * <div className="max-w-6xl mx-auto px-4">...</div>
-   */
   .container {
     width: 100%;
     margin-left: auto;
     margin-right: auto;
-    padding-left: 1rem; /* 16px - mobile padding */
-    padding-right: 1rem;
+    padding-left: 1rem;
   }
 
   .flex {
@@ -171,16 +152,16 @@
 
   @media (min-width: 640px) {
     .container {
-      padding-left: 1.5rem; /* 24px - tablet padding */
+      padding-left: 1.5rem;
       padding-right: 1.5rem;
     }
   }
 
   @media (min-width: 1024px) {
     .container {
-      padding-left: 2rem; /* 32px - desktop padding */
+      padding-left: 2rem;
       padding-right: 2rem;
-      max-width: 1280px; /* Standard content width */
+      max-width: 1280px;
     }
   }
 }
